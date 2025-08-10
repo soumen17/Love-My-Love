@@ -3,166 +3,186 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Love Spin Wheel</title>
+<title>Love Spin Wheel — 5 Pink Slices</title>
 <style>
-  :root {
-    --accent: #ff4d94;
-    --accent-dark: #d6336c;
-    --pink1: #ffe0ec;
-    --pink2: #ffc1d9;
-    --pink3: #ff99c8;
-    --pink4: #ffb3d9;
-    --pink5: #ffccd5;
+  :root{
+    --wheel-size: 380px;
+    --accent:#ff4d94;
+    --accent-dark:#d6336c;
+    --pink1: #ffe6f0;
+    --pink2: #ffd6ea;
+    --pink3: #ffc0dd;
+    --pink4: #ff9fcf;
+    --pink5: #ff7fbf;
+    --label-radius: 120px; /* distance of labels from center */
   }
-  html, body {
-    height: 100%;
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #fff0f6, #ffe6f0);
-    display: grid;
-    place-items: center;
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    background: linear-gradient(180deg,#fff7fb,#ffeef6);
+    color:#3b0030;
   }
-  .scene {
-    padding: 20px;
-    background: rgba(255,255,255,0.8);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(220,65,120,0.12);
-    text-align: center;
-    position: relative;
+  .card{
+    background: rgba(255,255,255,0.9);
+    padding:24px;
+    border-radius:18px;
+    width: min(92vw,900px);
+    text-align:center;
+    box-shadow: 0 18px 50px rgba(214,51,108,0.08);
   }
-  .title {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 15px;
-    color: #b3005c;
+  h1{margin:4px 0 8px; font-size:22px; letter-spacing:.2px}
+  p.sub{margin:0 0 18px;color:#7a2a4b;font-weight:600}
+
+  /* reveal + wheel container */
+  .wheel-wrap{
+    width:var(--wheel-size);
+    height:var(--wheel-size);
+    margin:0 auto;
+    position:relative;
+    transition: transform .8s cubic-bezier(.2,.9,.25,1), opacity .45s;
+    opacity:0;
+    pointer-events:none;
+    transform: translateY(56px) scale(.98); /* hidden/peek baseline */
   }
-  .wheel-wrap {
-    width: 400px;
-    height: 400px;
-    position: relative;
-    margin: 0 auto;
-    transition: transform .8s ease, opacity .5s;
-    opacity: 0;
-    pointer-events: none;
+  .wheel-wrap.peek{opacity:.95; transform: translateY(24px) scale(.995); pointer-events:none;}
+  .wheel-wrap.show{opacity:1; transform: translateY(0) scale(1); pointer-events:auto;}
+
+  /* pointer at top */
+  .pointer{
+    position:absolute;
+    top:-14px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0;height:0;
+    border-left:16px solid transparent;
+    border-right:16px solid transparent;
+    border-bottom:22px solid var(--accent-dark);
+    filter: drop-shadow(0 6px 14px rgba(214,51,108,0.15));
+    z-index:30;
   }
-  .wheel-wrap.peek {
-    transform: translateY(60px);
-    opacity: 0.9;
-  }
-  .wheel-wrap.show {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .wheel {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 8px solid white;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    transition: transform 4s cubic-bezier(.15,.9,.35,1);
+
+  /* the wheel */
+  .wheel{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:10px solid rgba(255,255,255,0.9);
+    box-shadow: 0 12px 30px rgba(214,51,108,0.12);
+    /* IMPORTANT: start from top (12 o'clock) so mapping is simpler */
     background: conic-gradient(
+      from -90deg,
       var(--pink1) 0deg 72deg,
       var(--pink2) 72deg 144deg,
       var(--pink3) 144deg 216deg,
       var(--pink4) 216deg 288deg,
       var(--pink5) 288deg 360deg
     );
-    position: relative;
+    position:relative;
+    transform: rotate(0deg);
+    transition: transform 4s cubic-bezier(.15,.9,.35,1);
+    user-select:none;
   }
-  .slice-label {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform-origin: center;
-    font-weight: bold;
-    color: #7a003f;
-    font-size: 16px;
-    width: 100px;
-    text-align: center;
+
+  /* labels inside the wheel (kept visually inside) */
+  .label {
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:150px;
+    margin-left:-75px;
+    transform-origin:center;
+    font-weight:800;
+    color:#5a0030;
+    font-size:16px;
+    text-align:center;
+    pointer-events:none;
+    text-transform:none;
   }
-  .pointer {
-    position: absolute;
-    top: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0; height: 0;
-    border-left: 14px solid transparent;
-    border-right: 14px solid transparent;
-    border-bottom: 20px solid var(--accent-dark);
+
+  /* reveal button */
+  .reveal {
+    display:inline-block;
+    margin-bottom:12px;
+    padding:10px 18px;
+    border-radius:999px;
+    border:none;
+    background: linear-gradient(180deg,var(--accent),var(--accent-dark));
+    color:white;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow:0 10px 30px rgba(214,51,108,0.15);
+    transition: transform .14s;
   }
-  .spin-btn {
-    margin-top: 25px;
-    background: var(--accent);
-    color: white;
-    font-weight: bold;
-    border: none;
-    padding: 15px 30px;
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    position: relative;
-    cursor: pointer;
-    font-size: 18px;
-    transition: transform .2s;
+  .reveal:active{transform:scale(.98)}
+
+  /* heart-shaped spin button (below wheel) */
+  .heart-spin {
+    margin:18px auto 6px;
+    width:110px;
+    height:110px;
+    background:transparent;
+    border:0;
+    cursor:pointer;
+    display:block;
+    position:relative;
+    transform: rotate(-45deg);
+    transition: transform .18s cubic-bezier(.2,.9,.25,1);
+    margin-top:18px;
   }
-  .spin-btn:hover {
-    transform: scale(1.05);
+  .heart-spin:active{ transform: rotate(-45deg) scale(.96); }
+  .heart-spin .heart-shape{
+    position:absolute;
+    inset:0;
+    background:var(--accent);
+    border-radius: 8px;
+    box-shadow:0 12px 30px rgba(214,51,108,0.18);
+  }
+  .heart-shape::before,
+  .heart-shape::after{
+    content:"";
+    position:absolute;
+    width:110px;
+    height:110px;
+    background:var(--accent);
+    border-radius:50%;
+  }
+  .heart-shape::before{ top:-55px; left:0; }
+  .heart-shape::after{ left:55px; top:0; }
+  /* counter-rotate the label text inside heart so it reads normally */
+  .heart-spin span {
+    display:inline-block;
+    position:relative;
+    z-index:10;
+    transform: rotate(45deg);
+    color:white;
+    font-weight:900;
+    font-size:16px;
+    letter-spacing: .6px;
+    user-select:none;
+  }
+  .hint{font-size:13px;color:#7a2a4b;margin-top:6px;font-weight:700}
+
+  /* responsive */
+  @media (max-width:520px){
+    :root { --wheel-size: 300px; --label-radius: 92px; }
+    .label{font-size:13px;width:120px;margin-left:-60px}
+    .heart-spin{width:88px;height:88px}
+    .heart-shape::before,.heart-shape::after{width:88px;height:88px; top:-44px; left:0}
   }
 </style>
 </head>
 <body>
+  <div class="card" role="main" aria-labelledby="title">
+    <h1 id="title">Love Spin Wheel</h1>
+    <p class="sub">Tap reveal → wheel will peek → then show. Press the heart below to spin. 💖</p>
 
-<div class="scene">
-  <div class="title">Love Spin Wheel</div>
+    <button id="revealBtn" class="reveal" aria-expanded="false">Tap for Love</button>
 
-  <button id="revealBtn" class="spin-btn">❤️ Reveal ❤️</button>
-
-  <div id="wheelWrap" class="wheel-wrap">
-    <div class="pointer"></div>
-    <div id="wheel" class="wheel">
-      <div class="slice-label" style="transform: rotate(36deg) translate(0, -140px) rotate(-36deg);">Date Night</div>
-      <div class="slice-label" style="transform: rotate(108deg) translate(0, -140px) rotate(-108deg);">Sweet Hug</div>
-      <div class="slice-label" style="transform: rotate(180deg) translate(0, -140px) rotate(-180deg);">Chocolate</div>
-      <div class="slice-label" style="transform: rotate(252deg) translate(0, -140px) rotate(-252deg);">Love Letter</div>
-      <div class="slice-label" style="transform: rotate(324deg) translate(0, -140px) rotate(-324deg);">Surprise Gift</div>
-    </div>
-    <button id="spinBtn" class="spin-btn">❤️ SPIN ❤️</button>
-  </div>
-</div>
-
-<script>
-  const revealBtn = document.getElementById('revealBtn');
-  const wheelWrap = document.getElementById('wheelWrap');
-  const wheel = document.getElementById('wheel');
-  const spinBtn = document.getElementById('spinBtn');
-
-  let spinning = false;
-
-  revealBtn.addEventListener('click', () => {
-    wheelWrap.classList.add('peek');
-    setTimeout(() => {
-      wheelWrap.classList.add('show');
-      wheelWrap.classList.remove('peek');
-      revealBtn.style.display = 'none';
-    }, 700);
-  });
-
-  spinBtn.addEventListener('click', () => {
-    if (spinning) return;
-    spinning = true;
-    const baseTurns = Math.floor(Math.random() * 3) + 4; // 4..6 turns
-    const randomOffset = Math.floor(Math.random() * 360);
-    const deg = baseTurns * 360 + randomOffset;
-    wheel.style.transform = `rotate(${deg}deg)`;
-    wheel.addEventListener('transitionend', () => {
-      spinning = false;
-      const sliceSize = 360 / 5;
-      let angle = deg % 360;
-      const index = Math.floor(((360 - angle + sliceSize/2) % 360) / sliceSize);
-      const prizes = ["Date Night","Sweet Hug","Chocolate","Love Letter","Surprise Gift"];
-      alert("You got: " + prizes[index]);
-    }, { once: true });
-  });
-</script>
-
-</body>
-</html>
+    <div id="wheelWrap" class="wheel-wrap" aria-hidden="true">
+      <div class="pointer" aria-hidden="true"></div>
+      <div id="whee
