@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Love Spin Wheel</title>
+<style>
+  :root{
+    --bg1: #ffeef2;
+    --bg2: #fff0f6;
+    --accent: #ff4d94;
+    --accent-dark: #d6336c;
+    --card: #ffffff;
+  }
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue";background:linear-gradient(135deg,var(--bg1),var(--bg2));display:grid;place-items:center;color:#222}
+  .container{width:100%;max-width:920px;padding:28px;box-sizing:border-box;position:relative;}
+  .scene{background:linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.6));border-radius:20px;box-shadow:0 10px 30px rgba(220,65,120,0.12);padding:28px;min-height:520px;position:relative;overflow:hidden;}
+  /* header hearts */
+  .top-hearts{position:absolute;left:16px;top:12px;display:flex;gap:8px}
+  .heart-mini{width:14px;height:14px;border-radius:50%;background:var(--accent);transform:rotate(45deg);box-shadow:0 2px 8px rgba(214,51,108,0.2);filter:blur(0.2px)}
+  /* big heart button (initial CTA) */
+  .heart-btn{position:absolute;right:26px;top:18px;background:linear-gradient(180deg,var(--accent),var(--accent-dark));padding:12px 16px;border-radius:999px;color:white;font-weight:700;border:none;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(214,51,108,0.18);transform-origin:center;transition:transform .18s;}
+  .heart-btn:active{transform:scale(.98)}
+  .heart-ico{width:18px;height:18px;display:inline-block;transform:rotate(45deg);background:transparent;position:relative}
+  .heart-ico::before,.heart-ico::after{content:"";position:absolute;width:12px;height:12px;background:white;border-radius:50%}
+  .heart-ico::before{left:0;top:0}
+  .heart-ico::after{right:0;top:0}
+  /* intro message */
+  .title{font-size:28px;font-weight:800;margin:0 0 6px}
+  .subtitle{margin:0;color:#6b6b6b;margin-bottom:18px}
+  /* wheel area */
+  .wheel-wrap{position: absolute;left:50%;transform:translateX(-50%);bottom:32px;width:420px;height:420px;display:grid;place-items:center;transition:transform .8s cubic-bezier(.2,.9,.25,1), opacity .5s; pointer-events:none; opacity:0;}
+  /* "half-step" initial state (peek) */
+  .wheel-wrap.peek{transform:translate(-50%,32%); opacity:.9;}
+  /* final visible state */
+  .wheel-wrap.show{transform:translate(-50%,-4%);opacity:1; pointer-events:auto;}
+  .wheel{width:420px;height:420px;border-radius:50%;position:relative;overflow:visible;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 40px rgba(214,51,108,0.12);background:conic-gradient(#ffd6e8 0 12.5%, #ffd1ef 12.5% 25%, #ffd6e8 25% 37.5%, #fff0f6 37.5% 50%, #ffd6e8 50% 62.5%, #ffd1ef 62.5% 75%, #fff0f6 75% 87.5%, #ffd6e8 87.5%);border:10px solid rgba(255,255,255,0.9);}
+  .wheel .center{position:absolute;width:110px;height:110px;border-radius:50%;background:linear-gradient(180deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;color:white;font-weight:800;box-shadow:0 8px 18px rgba(214,51,108,0.2);transform:translateZ(0);user-select:none}
+  .wheel .slice-label{position:absolute;left:50%;top:8%;transform-origin:0 200px; font-weight:700;font-size:14px; color:#6b053b}
+  /* pointer */
+  .pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:20px solid var(--accent-dark);filter:drop-shadow(0 6px 12px rgba(214,51,108,0.12))}
+  /* spin transition controlled by JS */
+  .spinning{transition: transform 4s cubic-bezier(.15,.9,.35,1)}
+  /* confetti hearts */
+  .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .confetti .heart{
+    position:absolute;width:20px;height:20px;transform:rotate(45deg);background:var(--accent);opacity:0;animation:fall 1300ms linear forwards;
+  }
+  @keyframes fall{
+    0%{opacity:1; transform: translateY(-10vh) scale(.8) rotate(45deg)}
+    100%{opacity:0; transform: translateY(80vh) rotate(180deg) scale(.6)}
+  }
+  /* little shimmer on center */
+  .center-shine{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 30px rgba(255,255,255,0.12) inset;opacity:.12}
+  /* instructions */
+  .hint{position:absolute;left:24px;bottom:24px;color:#8a5a6b;font-weight:600}
+  /* slices labels layout */
+  /* we'll place 8 labels around using transform rotation */
+  .labels {
+    position:absolute;
+    width:100%;height:100%;
+    display:block;
+  }
+  /* each label with data-angle attr will be rotated in JS */
+  .slice {
+    position:absolute;
+    left:50%; top:50%;
+    transform-origin: -140px 0;
+    font-weight:700;
+    color:#6b053b;
+    text-transform:uppercase;
+    letter-spacing:.6px;
+  }
+  /* responsive */
+  @media (max-width:520px){
+    .wheel-wrap{width:300px;height:300px}
+    .wheel{width:300px;height:300px;border-width:8px}
+    .wheel .center{width:86px;height:86px;font-size:14px}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="scene">
+    <div class="top-hearts">
+      <div class="heart-mini" style="opacity:.9"></div>
+      <div class="heart-mini" style="opacity:.7"></div>
+      <div class="heart-mini" style="opacity:.5"></div>
+    </div>
+
+    <button class="heart-btn" id="heartBtn" aria-label="Open the love wheel">
+      <span class="heart-ico" aria-hidden="true"></span>
+      <span>Tap for Love</span>
+    </button>
+
+    <h1 class="title">Spin & Win — Dil Se</h1>
+    <p class="subtitle">Touch the heart, wheel will peek (1/2 step) and then reveal — touch the wheel to spin. Surprise hearts on win 💖</p>
+
+    <!-- Wheel wrapper (hidden by default). We'll toggle classes: peek -> show -->
+    <div class="wheel-wrap" id="wheelWrap" aria-hidden="true">
+      <div class="pointer" aria-hidden="true"></div>
+
+      <div class="wheel" id="wheel" role="img" aria-label="Spin wheel">
+        <div class="labels" id="labels"></div>
+        <div class="center" id="centerBtn" role="button" tabindex="0">
+          SPIN
+          <div class="center-shine" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="confetti" id="confetti"></div>
+
+    <div class="hint">Tip: Tap the center or swipe/tap the wheel to spin</div>
+  </div>
+</div>
+
+<script>
+  // --- Setup slices and labels ---
+  const labels = ["Cupid's Kiss","Sweet Date","Free Coffee","Extra Love","Surprise Gift","Small Treat","Big Hug","Mystery"];
+  const labelsContainer = document.getElementById('labels');
+  const wheel = document.getElementById('wheel');
+
+  // create 8 slice labels positioned around wheel
+  for(let i=0;i<labels.length;i++){
+    const el = document.createElement('div');
+    el.className = 'slice';
+    const angle = i * (360 / labels.length);
+    el.style.transform = `rotate(${angle}deg) translate(-50%,-50%)`;
+    el.style.left = '50%';
+    el.style.top = '50%';
+    el.innerHTML = `<div style="transform: rotate(${angle + (360/labels.length)/2}deg) translate(140px) rotate(-${angle + (360/labels.length)/2}deg)">${labels[i]}</div>`;
+    labelsContainer.appendChild(el);
+  }
+
+  // --- Reveal logic: 1) heart click -> peek (half-step) 2) automatic full show after short delay ---
+  const heartBtn = document.getElementById('heartBtn');
+  const wheelWrap = document.getElementById('wheelWrap');
+  let peeked = false;
+  heartBtn.addEventListener('click', () => {
+    if(!peeked){
+      // first click: peek (1/2 step)
+      wheelWrap.classList.add('peek');
+      wheelWrap.setAttribute('aria-hidden','false');
+      peeked = true;
+      heartBtn.innerText = "Almost There...";
+      setTimeout(()=> {
+        // complete the reveal
+        wheelWrap.classList.add('show');
+        wheelWrap.classList.remove('peek');
+        heartBtn.style.opacity = 0; // fade out CTA
+      }, 650); // 650ms later fully show
+    }
+  });
+
+  // --- Spin logic ---
+  let spinning = false;
+  function spinTo(randDeg){
+    // enable smooth spinning with multiple turns + easing via CSS class
+    wheel.style.transition = 'transform 4s cubic-bezier(.15,.9,.35,1)';
+    wheel.style.transform = `rotate(${randDeg}deg)`;
+    spinning = true;
+    wheel.classList.add('spinning');
+
+    // after animation ends
+    wheel.addEventListener('transitionend', onSpinEnd, {once:true});
+  }
+
+  function onSpinEnd(){
+    spinning = false;
+    wheel.classList.remove('spinning');
+    // normalize rotation to small angle to allow repeated spins without precision issues
+    const computed = getComputedStyle(wheel).transform;
+    // get current rotation angle
+    let angle = 0;
+    if (computed && computed !== 'none') {
+      const values = computed.split('(')[1].split(')')[0].split(',');
+      const a = values[0], b = values[1];
+      angle = Math.round(Math.atan2(b, a) * (180/Math.PI));
+    }
+    // keep angle between 0-360
+    angle = (angle % 360 + 360) % 360;
+    // set transform without transition
+    wheel.style.transition = 'none';
+    wheel.style.transform = `rotate(${angle}deg)`;
+
+    // determine winner slice
+    const sliceSize = 360 / labels.length;
+    const index = Math.floor(((360 - angle + sliceSize/2) % 360) / sliceSize);
+    const prize = labels[index];
+    showConfetti();
+    setTimeout(()=> alert("You got: " + prize), 400);
+  }
+
+  // attach spin on center click or whole wheel click/tap
+  const centerBtn = document.getElementById('centerBtn');
+
+  function triggerSpin(){
+    if(spinning) return;
+    // randomize spin: add 3-6 full turns plus random offset so it lands on random slice
+    const baseTurns = Math.floor(Math.random() * 3) + 4; // 4..6 turns
+    const randomOffset = Math.floor(Math.random() * 360);
+    const deg = baseTurns * 360 + randomOffset;
+    spinTo(deg);
+  }
+
+  centerBtn.addEventListener('click', triggerSpin);
+  centerBtn.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerSpin(); }
+  });
+
+  // allow drag/spin gesture for fun (simple)
+  let startX = 0, dragging=false;
+  wheel.addEventListener('pointerdown', (e)=>{
+    if(!wheelWrap.classList.contains('show')) return;
+    // start a basic flick gesture
+    startX = e.clientX;
+    dragging = true;
+    wheel.setPointerCapture(e.pointerId);
+  });
+  window.addEventListener('pointerup', (e)=>{
+    if(!dragging) return;
+    dragging = false;
+    const deltaX = e.clientX - startX;
+    if(Math.abs(deltaX) > 20){
+      // translate horizontal flick to spin
+      const direction = deltaX > 0 ? 1 : -1;
+      const magnitude = Math.min(1200, Math.abs(deltaX) * 12); // limit
+      const base = 3 * 360;
+      const deg = base + (direction * magnitude) + Math.floor(Math.random()*360);
+      spinTo(deg);
+    }
+  });
+
+  // show confetti hearts
+  function showConfetti(){
+    const confetti = document.getElementById('confetti');
+    confetti.innerHTML = '';
+    for(let i=0;i<18;i++){
+      const h = document.createElement('div');
+      h.className = 'heart';
+      h.style.left = Math.random()*100 + '%';
+      h.style.top = (Math.random()*10) + '%';
+      h.style.background = `hsl(${Math.floor(Math.random()*30)+330}deg, 85%, 60%)`;
+      h.style.animationDelay = (Math.random()*300) + 'ms';
+      h.style.width = (12 + Math.random()*18) + 'px';
+      h.style.height = h.style.width;
+      confetti.appendChild(h);
+      setTimeout(()=> { if(h) h.remove(); }, 1600 + Math.random()*600);
+    }
+  }
+
+  // small UX: when wheel appears, give a tiny heartbeat/pulse
+  const observer = new MutationObserver(()=> {
+    if(wheelWrap.classList.contains('show')){
+      wheelWrap.animate([{transform:'translate(-50%,-12%) scale(.96)'},{transform:'translate(-50%,-4%) scale(1)'}], {duration:900, easing:'ease-out'});
+    }
+  });
+  observer.observe(wheelWrap, {attributes:true});
+
+  // Accessibility: if user taps elsewhere, remove CTA after reveal
+  document.addEventListener('click', (e)=>{
+    if(!wheelWrap.classList.contains('show')) return;
+    if(!heartBtn.contains(e.target)) heartBtn.style.display = 'none';
+  });
+
+  // small preload: make sure pointer cursor on interactive
+  wheel.style.cursor = 'grab';
+  centerBtn.style.cursor = 'pointer';
+</script>
+</body>
+</html>
